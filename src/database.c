@@ -168,10 +168,13 @@ int db_get_pending_notifications(agenda_item_t** items, int* count) {
     }
 
     time_t now = time(NULL);
-    time_t notification_time = now + (NOTIFICATION_ADVANCE_MINUTES * 60);
+    // Look for events that are exactly 15 minutes away (with a 1-minute window for safety)
+    time_t target_time = now + (NOTIFICATION_ADVANCE_MINUTES * 60);
+    time_t notification_start = target_time - 30; // 30 seconds before the 15-minute mark
+    time_t notification_end = target_time + 30;   // 30 seconds after the 15-minute mark
 
     const char* sql = "SELECT id, date, time, description, datetime, notified "
-                     "FROM agenda_items WHERE datetime > ? AND datetime <= ? AND notified = 0 "
+                     "FROM agenda_items WHERE datetime >= ? AND datetime <= ? AND notified = 0 "
                      "ORDER BY datetime;";
     
     sqlite3_stmt* stmt;
@@ -181,8 +184,8 @@ int db_get_pending_notifications(agenda_item_t** items, int* count) {
         return -1;
     }
 
-    sqlite3_bind_int64(stmt, 1, now);
-    sqlite3_bind_int64(stmt, 2, notification_time);
+    sqlite3_bind_int64(stmt, 1, notification_start);
+    sqlite3_bind_int64(stmt, 2, notification_end);
 
     // Count items first
     *count = 0;

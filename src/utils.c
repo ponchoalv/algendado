@@ -65,6 +65,9 @@ time_t combine_datetime(const char* date, const char* time) {
         return -1;
     }
     
+    // Set DST to -1 to let mktime determine the correct DST setting
+    tm_datetime.tm_isdst = -1;
+    
     return mktime(&tm_datetime);
 }
 

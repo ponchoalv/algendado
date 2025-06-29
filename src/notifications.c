@@ -157,47 +157,56 @@ static volatile int notification_thread_running = 1;
 void* notification_thread(void* arg) {
     (void)arg; // Suppress unused parameter warning
     
+    printf("Notification thread started\n");
+    
     while (notification_thread_running) {
         agenda_item_t* items;
         int count;
         
-        if (db_get_pending_notifications(&items, &count) == 0 && count > 0) {
-            for (int i = 0; i < count; i++) {
-                char title[64];
-                char message[512];
-                char formatted_time[32];
+        if (db_get_pending_notifications(&items, &count) == 0) {
+            if (count > 0) {
+                printf("Found %d pending notifications\n", count);
                 
-                format_time_for_display(items[i].time, formatted_time);
-                snprintf(title, sizeof(title), "📅 Agenda Reminder");
-                snprintf(message, sizeof(message), "%s", items[i].description);
-                
-                printf("Showing notification for: %s\n", items[i].description);
-                
-                // Fork a process to show the visual notification
-                pid_t pid = fork();
-                if (pid == 0) {
-                    // Child process - show visual notification
-                    show_visual_notification(title, message, formatted_time);
-                    exit(0);
-                } else if (pid > 0) {
-                    // Parent process - also send system notification as backup
-                    send_notification(title, items[i].description);
-                    db_mark_notified(items[i].id);
-                } else {
-                    fprintf(stderr, "Failed to fork process for notification\n");
-                    // Fallback to system notification only
-                    if (send_notification(title, items[i].description) == 0) {
+                for (int i = 0; i < count; i++) {
+                    char title[64];
+                    char message[512];
+                    char formatted_time[32];
+                    
+                    format_time_for_display(items[i].time, formatted_time);
+                    snprintf(title, sizeof(title), "📅 Agenda Reminder");
+                    snprintf(message, sizeof(message), "%s", items[i].description);
+                    
+                    printf("Showing notification for: %s at %s (ID: %d)\n", 
+                           items[i].description, formatted_time, items[i].id);
+                    
+                    // Fork a process to show the visual notification
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        // Child process - show visual notification
+                        show_visual_notification(title, message, formatted_time);
+                        exit(0);
+                    } else if (pid > 0) {
+                        // Parent process - also send system notification as backup
+                        send_notification(title, items[i].description);
                         db_mark_notified(items[i].id);
+                        printf("Marked item %d as notified\n", items[i].id);
+                    } else {
+                        fprintf(stderr, "Failed to fork process for notification\n");
+                        // Fallback to system notification only
+                        if (send_notification(title, items[i].description) == 0) {
+                            db_mark_notified(items[i].id);
+                        }
                     }
                 }
+                free(items);
             }
-            free(items);
         }
         
         // Check every 30 seconds
         sleep(30);
     }
     
+    printf("Notification thread stopped\n");
     return NULL;
 }
 
