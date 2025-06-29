@@ -20,10 +20,12 @@ CLIENT_OBJECTS=$(CLIENT_SOURCES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 # Executables
 SERVER_TARGET=algen-server
 CLIENT_TARGET=algen
+NOTIFICATION_TARGET=algen-notify
+STACK_TARGET=algen-stack
 
 .PHONY: all clean install
 
-all: $(BUILD_DIR) $(SERVER_TARGET) $(CLIENT_TARGET)
+all: $(BUILD_DIR) $(SERVER_TARGET) $(CLIENT_TARGET) $(NOTIFICATION_TARGET) $(STACK_TARGET)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -34,11 +36,17 @@ $(SERVER_TARGET): $(SERVER_OBJECTS)
 $(CLIENT_TARGET): $(CLIENT_OBJECTS)
 	$(CC) $(CLIENT_OBJECTS) -o $@ $(CLIENT_LIBS)
 
+$(NOTIFICATION_TARGET): $(BUILD_DIR)/notification_popup.o $(BUILD_DIR)/notifications.o $(BUILD_DIR)/utils.o $(BUILD_DIR)/database.o
+	$(CC) $(BUILD_DIR)/notification_popup.o $(BUILD_DIR)/notifications.o $(BUILD_DIR)/utils.o $(BUILD_DIR)/database.o -o $@ $(SERVER_LIBS)
+
+$(STACK_TARGET): $(BUILD_DIR)/notification_stack.o $(BUILD_DIR)/notifications.o $(BUILD_DIR)/utils.o $(BUILD_DIR)/database.o
+	$(CC) $(BUILD_DIR)/notification_stack.o $(BUILD_DIR)/notifications.o $(BUILD_DIR)/utils.o $(BUILD_DIR)/database.o -o $@ $(SERVER_LIBS)
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(SERVER_TARGET) $(CLIENT_TARGET)
+	rm -rf $(BUILD_DIR) $(SERVER_TARGET) $(CLIENT_TARGET) $(NOTIFICATION_TARGET) $(STACK_TARGET)
 
 install: all
 	cp $(CLIENT_TARGET) /usr/local/bin/

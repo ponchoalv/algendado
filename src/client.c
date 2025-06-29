@@ -3,7 +3,8 @@
 static void print_usage(void) {
     printf("Usage:\n");
     printf("  algen add <date> <time> \"<description>\"\n");
-    printf("  algen get <period>\n\n");
+    printf("  algen get <period>\n");
+    printf("  algen remove <id>\n\n");
     printf("Date formats:\n");
     printf("  today, tomorrow, or DD/MM/YYYY\n\n");
     printf("Time formats:\n");
@@ -16,6 +17,7 @@ static void print_usage(void) {
     printf("  algen add 15/07/2025 09:00 \"doctor appointment\"\n");
     printf("  algen get today\n");
     printf("  algen get week\n");
+    printf("  algen remove 5\n");
 }
 
 static int start_server_if_needed(void) {
@@ -111,12 +113,40 @@ static int handle_get_command(int argc, char* argv[]) {
         format_date_for_display(items[i].date, formatted_date);
         format_time_for_display(items[i].time, formatted_time);
         
-        printf("%d. %s at %s\n", i + 1, formatted_date, formatted_time);
-        printf("   %s\n\n", items[i].description);
+        printf("[ID: %d] %s at %s\n", items[i].id, formatted_date, formatted_time);
+        printf("        %s\n\n", items[i].description);
     }
 
     free(items);
     return 0;
+}
+
+static int handle_remove_command(int argc, char* argv[]) {
+    if (argc < 3) {
+        fprintf(stderr, "Error: Missing ID for remove command\n");
+        print_usage();
+        return 1;
+    }
+
+    char* endptr;
+    long id = strtol(argv[2], &endptr, 10);
+    
+    // Check if the conversion was successful
+    if (*endptr != '\0' || id <= 0) {
+        fprintf(stderr, "Error: Invalid ID '%s'. ID must be a positive number.\n", argv[2]);
+        return 1;
+    }
+
+    // Start server if needed (for potential web interface sync)
+    start_server_if_needed();
+
+    if (db_remove_item((int)id) == 0) {
+        printf("Successfully removed agenda item with ID %ld\n", id);
+        return 0;
+    } else {
+        fprintf(stderr, "Failed to remove agenda item with ID %ld\n", id);
+        return 1;
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -136,6 +166,8 @@ int main(int argc, char* argv[]) {
         result = handle_add_command(argc, argv);
     } else if (strcmp(argv[1], "get") == 0) {
         result = handle_get_command(argc, argv);
+    } else if (strcmp(argv[1], "remove") == 0) {
+        result = handle_remove_command(argc, argv);
     } else {
         fprintf(stderr, "Error: Unknown command '%s'\n", argv[1]);
         print_usage();

@@ -251,6 +251,35 @@ int db_mark_notified(int id) {
     return 0;
 }
 
+int db_remove_item(int id) {
+    const char* sql = "DELETE FROM agenda_items WHERE id = ?";
+    sqlite3_stmt* stmt;
+    
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "Failed to remove item: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    // Check if any rows were actually deleted
+    if (sqlite3_changes(db) == 0) {
+        fprintf(stderr, "No item found with ID %d\n", id);
+        return -1;
+    }
+
+    return 0;
+}
+
 void db_close(void) {
     if (db) {
         sqlite3_close(db);

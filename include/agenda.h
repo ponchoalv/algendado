@@ -30,6 +30,16 @@ typedef struct {
     int notified;                // 0 = not notified, 1 = notified
 } agenda_item_t;
 
+typedef struct notification_window {
+    char title[64];
+    char message[512];
+    char time_str[32];
+    float slideOffset;
+    float autoCloseTimer;
+    int position_index;
+    struct notification_window* next;
+} notification_window_t;
+
 typedef enum {
     VIEW_TODAY,
     VIEW_WEEK,
@@ -44,6 +54,7 @@ int db_add_item(const char* date, const char* time, const char* description);
 int db_get_items(view_type_t view, agenda_item_t** items, int* count);
 int db_get_pending_notifications(agenda_item_t** items, int* count);
 int db_mark_notified(int id);
+int db_remove_item(int id);
 void db_close(void);
 
 // Server functions
@@ -59,6 +70,8 @@ time_t combine_datetime(const char* date, const char* time);
 // Notification functions
 int send_notification(const char* title, const char* message);
 int show_visual_notification(const char* title, const char* message, const char* time_str);
+int show_stacked_notifications(void);
+void add_notification_to_stack(const char* title, const char* message, const char* time_str);
 void* notification_thread(void* arg);
 
 // Web interface functions
